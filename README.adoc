@@ -1,0 +1,128 @@
+= Neo4j Machine Learning Procedures (WIP)
+
+image:https://travis-ci.org/neo4j-contrib/neo4j-ml-procedures.svg?branch=3.1["Build state", link="https://travis-ci.org/neo4j-contrib/neo4j-ml-procedures"]
+
+This project provides procedures and functions to support machine learning applications with Neo4j.
+
+[NOTE]
+This project requires Neo4j 3.2.x 
+
+Thanks a lot to https://github.com/encog/encog-java-core[Encog for the great library^] and to https://www.stardog.com/docs/#_machine_learning[Stardog for the idea^].
+
+== Installation
+
+1. Download the jar from the https://github.com/neo4j-contrib/neo4j-ml-procedures/releases/latest[latest release] or build it locally
+2. Copy it into your `$NEO4J_HOME/plugins` directory.
+3. Restart your server.
+
+== Built in classification and regression (WIP)
+
+[source,cypher]
+----
+CALL ml.create("model",{types},"output",{config}) YIELD model, state, info
+
+CALL ml.add("model", {inputs}, given)  YIELD model, state, info
+
+CALL ml.train() YIELD model, state, info
+
+CALL ml.predict("model", {inputs}) YIELD value [, confidence]
+
+CALL ml.remove(model) YIELD model, state
+----
+
+Example: IRIS Classification from Encog
+
+[source,cypher]
+----
+CALL ml.create("iris",
+  {sepalLength: "float", sepalWidth: "float", petalLength: "float", petalWidth: "float", kind: "class"}, "kind",{});
+----
+
+[source,cypher]
+----
+LOAD CSV FROM "https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data" AS row
+CALL ml.add('iris', {sepalLength: row[0], sepalWidth: row[1], petalLength: row[2], petalWidth: row[3]}, row[4])
+YIELD state
+WITH collect(distinct state) as states, collect(distinct row[4]) as kinds
+
+CALL ml.train('iris')  YIELD state, info
+
+RETURN state, states, kinds, info;
+----
+
+----
+╒═══════╤════════════╤══════════════════════════════════════════════════╤══════════════════════════════════════════════════════════════════════╕
+│"state"│"states"    │"kinds"                                           │"info"                                                                │
+╞═══════╪════════════╪══════════════════════════════════════════════════╪══════════════════════════════════════════════════════════════════════╡
+│"ready"│["training"]│["Iris-setosa","Iris-versicolor","Iris-virginica"]│{"trainingSets":150,"methodName":"feedforward","normalization":"[Norma│
+│       │            │                                                  │lizationHelper:\n[ColumnDefinition:sepalLength(continuous);low=4,30000│
+│       │            │                                                  │0,high=7,900000,mean=5,843333,sd=0,825301]\n[ColumnDefinition:petalLen│
+│       │            │                                                  │gth(continuous);low=1,000000,high=6,900000,mean=3,758667,sd=1,758529]\│
+│       │            │                                                  │n[ColumnDefinition:sepalWidth(continuous);low=2,000000,high=4,400000,m│
+│       │            │                                                  │ean=3,054000,sd=0,432147]\n[ColumnDefinition:petalWidth(continuous);lo│
+│       │            │                                                  │w=0,100000,high=2,500000,mean=1,198667,sd=0,760613]\n[ColumnDefinition│
+│       │            │                                                  │:kind(nominal);[Iris-setosa, Iris-versicolor, Iris-virginica]]\n]","tr│
+│       │            │                                                  │ainingError":0.034672103747075696,"selectedMethod":"[BasicNetwork: Lay│
+│       │            │                                                  │ers=3]","validationError":0.05766172747088482}                        │
+└───────┴────────────┴──────────────────────────────────────────────────┴──────────────────────────────────────────────────────────────────────┘
+----
+
+[source,cypher]
+----
+LOAD CSV FROM "https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data" AS row
+WITH state, info, row limit 10
+
+CALL ml.predict("iris", {sepalLength: row[0], sepalWidth: row[1], petalLength: row[2], petalWidth: row[3]})
+YIELD value as prediction
+
+RETURN row[4] as correct, prediction, state, row;
+----
+
+----
+╒═════════════╤═════════════╤═══════╤═══════════════════════════════════════╕
+│"correct"    │"prediction" │"state"│"row"                                  │
+╞═════════════╪═════════════╪═══════╪═══════════════════════════════════════╡
+│"Iris-setosa"│"Iris-setosa"│"ready"│["5.1","3.5","1.4","0.2","Iris-setosa"]│
+├─────────────┼─────────────┼───────┼───────────────────────────────────────┤
+│"Iris-setosa"│"Iris-setosa"│"ready"│["4.9","3.0","1.4","0.2","Iris-setosa"]│
+├─────────────┼─────────────┼───────┼───────────────────────────────────────┤
+│"Iris-setosa"│"Iris-setosa"│"ready"│["4.7","3.2","1.3","0.2","Iris-setosa"]│
+├─────────────┼─────────────┼───────┼───────────────────────────────────────┤
+...
+----
+
+[source,cypher]
+----
+CALL ml.remove('iris') YIELD model, state;
+----
+
+== Manual neural network operations (TODO)
+
+.Procedures
+[source,cypher]
+----
+apoc.ml.propagate(network, {inputs}) yield {outputs}
+apoc.ml.backprop(network, {output}) yield {network}
+----
+
+.Functions
+[source,cypher]
+----
+apoc.ml.sigmoid
+apoc.ml.sigmoidPrime
+----
+
+Future plans include storing networks from the common machine learning libraries (TensorFlow, Deeplearning4j, Encog etc.) as executable Network structures in Neo4j.
+
+== Building it yourself
+
+This project uses maven, to build a jar-file with the procedure in this
+project, simply package the project with maven:
+
+    mvn clean package
+
+This will produce a jar-file,`target/neo4j-ml-procedures-*-SNAPSHOT.jar`, that can be copied in the `$NEO4J_HOME/plugins` directory of your Neo4j instance.
+
+== License
+
+Apache License V2, see LICENSE
