@@ -126,3 +126,11 @@ This will produce a jar-file,`target/neo4j-ml-procedures-*-SNAPSHOT.jar`, that c
 == License
 
 Apache License V2, see LICENSE
+
+== Next Steps
+
+* Normalization / Classification for dl4j
+* Push frameworks to separate modules
+* Support external frameworks
+* Store / Load models from graph
+* Expose simple ML functions / propagation/ backprop on graph structures as procedures and functions
