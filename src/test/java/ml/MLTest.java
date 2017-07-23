@@ -23,7 +23,7 @@ public class MLTest {
     public void predict() throws Exception {
         ML ml = new ML();
         Map<String, String> types = stringMap("sepal-length", "float", "sepal-width", "float", "petal-length", "float", "petal-width", "float", "iris", "class");
-        String model = ml.create("iris",types, "iris", Collections.emptyMap()).findAny().get().model;
+        String model = ml.create("iris",types, "iris", Collections.singletonMap("framework","encog")).findAny().get().model;
 
         File irisFile = new File(getClass().getResource("/iris.csv").getFile());
         ReadCSV csv = new ReadCSV(irisFile, false, CSVFormat.DECIMAL_POINT);

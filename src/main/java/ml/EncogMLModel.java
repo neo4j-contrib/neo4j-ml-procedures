@@ -7,6 +7,7 @@ import org.encog.ml.data.versatile.VersatileMLDataSet;
 import org.encog.ml.data.versatile.columns.ColumnDefinition;
 import org.encog.ml.data.versatile.columns.ColumnType;
 import org.encog.ml.data.versatile.sources.VersatileDataSource;
+import org.encog.ml.factory.MLMethodFactory;
 import org.encog.ml.model.EncogModel;
 import org.encog.util.simple.EncogUtility;
 
@@ -23,12 +24,17 @@ public class EncogMLModel extends MLModel {
 
 
     @Override
-    protected String doPredict(String[] line) {
+    protected Object doPredict(String[] line) {
         NormalizationHelper helper = model.getDataset().getNormHelper();
         MLData input = helper.allocateInputVector();
         helper.normalizeInputVector(line, input.getData(), false);
         MLData output = method.compute(input);
-        return helper.denormalizeOutputVectorToString(output)[0];
+        DataType outputType = types.get(this.output);
+        switch (outputType) {
+            case _float : return output.getData(0);
+            case _class: return helper.denormalizeOutputVectorToString(output)[0];
+            default: throw new IllegalArgumentException("Output type not yet supported "+outputType);
+        }
     }
 
     @Override
@@ -78,7 +84,7 @@ public class EncogMLModel extends MLModel {
         // MLMethodFactor.TYPE_NEAT: NEAT Neural Network
         // MLMethodFactor.TYPE_PNN: Probabilistic Neural Network
         EncogModel model = new EncogModel(data);
-        model.selectMethod(data, methodName); // todo from config
+        model.selectMethod(data, methodFor(methodName)); // todo from config
         // Send any output to the console.
 // model.setReport(new ConsoleStatusReportable());
 
@@ -113,9 +119,16 @@ public class EncogMLModel extends MLModel {
         this.state = State.ready;
     }
 
-    /*
-    "feedforward" "svm", "rbfnetwork", "neat", "pnn"
-    */
+    private String methodFor(Method method) {
+        switch (method) {
+            case ffd: return  MLMethodFactory.TYPE_FEEDFORWARD;
+            case svm: return MLMethodFactory.TYPE_SVM;
+            case rbf: return MLMethodFactory.TYPE_RBFNETWORK;
+            case neat: return MLMethodFactory.TYPE_NEAT;
+            case pnn: return MLMethodFactory.TYPE_PNN;
+            default: throw new IllegalArgumentException("Unknown method "+method);
+        }
+    }
 
     /*
     nominal,
@@ -137,17 +150,7 @@ ignore
     }
 
     public EncogMLModel(String name, Map<String, String> types, String output, Map<String, Object> config) {
-        super(output, config, name);
-        if (models.containsKey(name)) throw new IllegalArgumentException("Model "+name+" already exists, please remove first");
-        if (!types.containsKey(output)) throw new IllegalArgumentException("Outputs not defined: " + output);
-        int i = 0;
-        for (Map.Entry<String, String> entry : types.entrySet()) {
-            String key = entry.getKey();
-            this.types.put(key, DataType.from(entry.getValue()));
-            if (!key.equals(output)) this.offsets.put(key, i++);
-        }
-        this.offsets.put(output, i);
-        models.put(name, this);
+        super(name, types, output, config);
     }
 
 

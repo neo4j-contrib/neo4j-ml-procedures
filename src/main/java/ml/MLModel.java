@@ -21,14 +21,32 @@ public abstract class MLModel {
     final Map<String, Object> config;
     final List<String[]> rows = new ArrayList<>();
     State state;
-    String methodName;
+    Method methodName;
 
-    public MLModel(String output, Map<String, Object> config, String name) {
-        this.output = output;
-        this.state = State.created;
-        this.config = config;
+    public MLModel(String name, Map<String,String> types, String output, Map<String, Object> config) {
+        if (models.containsKey(name)) throw new IllegalArgumentException("Model "+name+" already exists, please remove first");
+
         this.name = name;
-        this.methodName = MLMethodFactory.TYPE_FEEDFORWARD;
+        this.state = State.created;
+        this.output = output;
+        this.config = config;
+        initTypes(types, output);
+
+        this.methodName = Method.ffd;
+
+        models.put(name, this);
+
+    }
+
+    protected void initTypes(Map<String, String> types, String output) {
+        if (!types.containsKey(output)) throw new IllegalArgumentException("Outputs not defined: " + output);
+        int i = 0;
+        for (Map.Entry<String, String> entry : types.entrySet()) {
+            String key = entry.getKey();
+            this.types.put(key, DataType.from(entry.getValue()));
+            if (!key.equals(output)) this.offsets.put(key, i++);
+        }
+        this.offsets.put(output, i);
     }
 
     public static ML.ModelResult remove(String model) {
@@ -78,7 +96,7 @@ public abstract class MLModel {
         if (state == State.ready) {
             String[] line = asRow(inputs, null);
 
-            String predicted = doPredict(line);
+            Object predicted = doPredict(line);
             // todo confidence
             return predicted;
         } else {
@@ -86,7 +104,7 @@ public abstract class MLModel {
         }
     }
 
-    protected abstract String doPredict(String[] line);
+    protected abstract Object doPredict(String[] line);
 
     protected abstract void doTrain();
 
@@ -109,15 +127,15 @@ public abstract class MLModel {
         return result;
     };
 
-    public static MLModel create(String model, Map<String, String> types, String output, Map<String, Object> config) {
+    public static MLModel create(String name, Map<String, String> types, String output, Map<String, Object> config) {
         String framework = config.getOrDefault("framework","encog").toString().toLowerCase();
         switch (framework) {
-            case "encog": return new EncogMLModel(model,types,output,config);
+            case "encog": return new EncogMLModel(name,types,output,config);
+            case "dl4j": return new DL4JMLModel(name,types,output,config);
             default: throw new IllegalArgumentException("Unknown framework: "+framework);
         }
     }
 
-    //
     enum Method {
         ffd, svm, rbf, neat, pnn;
     }
