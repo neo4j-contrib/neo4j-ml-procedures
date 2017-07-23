@@ -32,7 +32,7 @@ apoc.ml.delete(model) yield model
 
     @Procedure
     public Stream<ModelResult> create(@Name("model") String model, @Name("types") Map<String,String> types, @Name(value="output") String output, @Name(value="params",defaultValue="{}") Map<String, Object> config) {
-        return Stream.of(new MLModel(model,types,output,config).asResult());
+        return Stream.of(MLModel.create(model,types,output,config).asResult());
     }
 
     @Procedure
@@ -80,7 +80,7 @@ apoc.ml.delete(model) yield model
         public final String state;
         public final Map<String,Object> info = new HashMap<>();
 
-        public ModelResult(String model, MLModel.State state) {
+        public ModelResult(String model, EncogMLModel.State state) {
             this.model = model;
             this.state = state.name();
         }
