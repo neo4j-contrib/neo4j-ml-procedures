@@ -4,10 +4,12 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.logging.Log;
 import org.neo4j.procedure.Context;
+import org.neo4j.procedure.Mode;
 import org.neo4j.procedure.Name;
 import org.neo4j.procedure.Procedure;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.stream.Stream;
 
 public class ML {
@@ -30,6 +32,19 @@ apoc.ml.regression(model, {params}) yield prediction:float, confidence:float
 apoc.ml.delete(model) yield model
 
      */
+
+    @Procedure (value = "ml.deepwalk", mode = Mode.WRITE)
+    public void deepwalk(@Name("learningRate") double learningRate,
+                         @Name("randomSeed") long rndSeed,
+                         @Name("desired vector size") long vectorSize,
+                         @Name("window size for random sampling") long windowSize,
+                         @Name("walk length") long walkLength,
+                         @Name("property name for saving vectors") String vectorPropertyName) throws InterruptedException {
+
+        log.info("Running ml.deepwalk ...");
+        Deepwalk.vectoriseAllNodes(db, (int) learningRate, (int) rndSeed, (int) vectorSize, (int) windowSize, (int) walkLength, vectorPropertyName);
+        log.info("deepwalk complete.");
+    }
 
     @Procedure
     public Stream<ModelResult> create(@Name("model") String model, @Name("types") Map<String,String> types, @Name(value="output") String output, @Name(value="params",defaultValue="{}") Map<String, Object> config) {
