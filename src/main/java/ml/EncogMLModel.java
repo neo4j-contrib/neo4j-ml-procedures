@@ -10,6 +10,7 @@ import org.encog.ml.data.versatile.sources.VersatileDataSource;
 import org.encog.ml.factory.MLMethodFactory;
 import org.encog.ml.model.EncogModel;
 import org.encog.util.simple.EncogUtility;
+import org.neo4j.graphdb.Node;
 
 import java.util.*;
 
@@ -17,10 +18,23 @@ import java.util.*;
  * @author mh
  * @since 19.07.17
  */
-public class EncogMLModel extends MLModel {
+public class EncogMLModel extends MLModel<String[]> {
 
     private EncogModel model; // todo MLMethod and decide later between regression, classification and others
     private MLRegression method;
+
+
+    @Override
+    protected String[] asRow(Map<String, Object> inputs, Object output)  {
+        String[] row = new String[inputs.size() + (output == null ? 0 : 1)];
+        for (String k : inputs.keySet()) {
+            row[offsets.get(k)] = inputs.get(k).toString();
+        }
+        if (output != null) {
+            row[offsets.get(this.output)] = output.toString();
+        }
+        return row;
+    }
 
 
     @Override

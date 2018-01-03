@@ -24,7 +24,7 @@ public class DL4JTest {
         Map<String, String> types = stringMap("val1", "float", "val2", "float", "output", "class");
         String model = ml.create("cl-lin",types, "output", Collections.singletonMap("framework","dl4j")).findAny().get().model;
 
-        URL trainData = new URL("https://raw.githubusercontent.com/deeplearning4j/dl4j-examples/master/dl4j-examples/src/main/resources/classification/linear_data_train.csv");
+        URL trainData = getClass().getResource("/linear_data_train.csv");
         ReadCSV csv = new ReadCSV(trainData.openStream(), false, CSVFormat.DECIMAL_POINT);
         while (csv.next()) {
             Map<String, Object> inputs = map("val1", csv.get(1), "val2", csv.get(2));
@@ -32,7 +32,9 @@ public class DL4JTest {
         }
         csv.close();
 
-        URL evalData = new URL("https://raw.githubusercontent.com/deeplearning4j/dl4j-examples/master/dl4j-examples/src/main/resources/classification/linear_data_eval.csv");
+        ml.train(model);
+        ml.show(model);
+        URL evalData = getClass().getResource("/linear_data_eval.csv");
         csv = new ReadCSV(evalData.openStream(), false, CSVFormat.DECIMAL_POINT);
         int total = 0, correct = 0;
         while (csv.next()) {
@@ -44,7 +46,7 @@ public class DL4JTest {
             }
         }
         csv.close();
-        assertEquals(total,correct,3d);
+        assertEquals(total,correct,5d);
     }
 
 }

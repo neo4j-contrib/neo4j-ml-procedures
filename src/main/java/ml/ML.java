@@ -1,6 +1,7 @@
 package ml;
 
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Node;
 import org.neo4j.logging.Log;
 import org.neo4j.procedure.Context;
 import org.neo4j.procedure.Name;
@@ -51,12 +52,27 @@ apoc.ml.delete(model) yield model
         mlModel.add(inputs,output);
         return Stream.of(mlModel.asResult());
     }
+
     @Procedure
     public Stream<ModelResult> train(@Name("model") String model) {
         MLModel mlModel = MLModel.from(model);
         mlModel.train();
         return Stream.of(mlModel.asResult());
     }
+
+    public static class NodeResult {
+        public final Node node;
+
+        public NodeResult(Node node) {
+            this.node = node;
+        }
+    }
+    @Procedure
+    public Stream<NodeResult> show(@Name("model") String model) {
+        List<Node> show = MLModel.from(model).show();
+        return show.stream().map(NodeResult::new);
+    }
+
     @Procedure
     public Stream<PredictionResult> predict(@Name("model") String model, @Name("inputs") Map<String,Object> inputs) {
         MLModel mlModel = MLModel.from(model);
