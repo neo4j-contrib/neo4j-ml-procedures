@@ -17,7 +17,7 @@
         <project.reporting.outputEncoding>${encoding}</project.reporting.outputEncoding>
         <maven.compiler.source>${java.version}</maven.compiler.source>
         <maven.compiler.target>${java.version}</maven.compiler.target>
-        <neo4j.version>3.2.2</neo4j.version>
+        <neo4j.version>3.3.4</neo4j.version>
     </properties>
 
     <dependencies>
@@ -54,7 +54,7 @@
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-math3</artifactId>
-            <version>3.4.1</version>
+            <version>3.6.1</version>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
@@ -103,6 +103,21 @@
             <scope>test</scope>
         </dependency>
 
+        <dependency>
+            <groupId>org.neo4j.test</groupId>
+            <artifactId>neo4j-harness</artifactId>
+            <version>${neo4j.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <!-- Used to send cypher statements to our procedure. -->
+            <groupId>org.neo4j.driver</groupId>
+            <artifactId>neo4j-java-driver</artifactId>
+            <version>1.5.0</version>
+            <scope>test</scope>
+        </dependency>
+
     </dependencies>
 
     <build>
@@ -118,6 +133,16 @@
                         </goals>
                     </execution>
                 </executions>
+            </plugin>
+
+            <plugin>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.1</version>
+                <configuration>
+                    <!-- Neo4j Procedures require Java 8 -->
+                    <source>1.8</source>
+                    <target>1.8</target>
+                </configuration>
             </plugin>
         </plugins>
     </build>
