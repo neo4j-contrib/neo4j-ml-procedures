@@ -24,17 +24,20 @@ public class LRModel {
         models.put(name, this);
     }
 
-    public LRModel(String model, SimpleRegression R, String state) {
+    public LRModel(String model, SimpleRegression R) {
         if (models.containsKey(model))
             throw new IllegalArgumentException("Model " + model + " already exists, please remove it first");
         this.name = model;
-        switch(state) {
-            case "created": this.state = State.created;
-            case "ready": this.state = State.ready;
-            case "removed": this.state = State.removed;
-            case "unknown": this.state = State.unknown;
+        if (R == null) {
+            this.R = new SimpleRegression();
+            this.state = State.created;
+        } else {
+            this.R = R;
+            if (R.getN() < 2)
+                this.state = State.created;
+            else
+                this.state = State.ready;
         }
-        this.R = R;
         models.put(name, this);
     }
 
@@ -51,9 +54,9 @@ public class LRModel {
         }
     }
 
-    public LR.PredictResult predict(double given) {
+    public double predict(double given) {
         if (this.state == State.ready)
-            return new LR.PredictResult(R.predict(given));
+            return R.predict(given);
         throw new IllegalArgumentException("Not enough data in model to predict yet");
     }
 
@@ -63,6 +66,11 @@ public class LRModel {
         if (R.getN() < 2) {
             this.state = State.created;
         }
+    }
+
+    public byte[] serialize() {
+        try { return LR.convertToBytes(R); }
+        catch (IOException e) { throw new RuntimeException(name + " cannot be serialized."); }
     }
 
     public static LR.ModelResult removeModel(String model) {

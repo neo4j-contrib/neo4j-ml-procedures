@@ -1,6 +1,7 @@
 package regression;
 
 import java.util.HashMap;
+import java.util.Map;
 import org.junit.Rule;
 import org.junit.Test;
 import org.neo4j.driver.v1.*;
@@ -41,11 +42,10 @@ public class LRTest {
             session.run("CALL regression.linear.create('work and progress')");
             //add known data
             session.run("MATCH () - [r:WORKS_FOR] -> () WHERE exists(r.time) AND exists(r.progress) CALL " +
-                    "regression.linear.addData('work and progress', r.time, r.progress) YIELD state RETURN r.time, r.progress, state");
+                    "regression.linear.add('work and progress', r.time, r.progress) RETURN r");
             //store predictions
-            session.run("MATCH () - [r:WORKS_FOR] -> () WHERE exists(r.time) AND NOT exists(r.progress) CALL " +
-                    "regression.linear.predict('work and progress', r.time) YIELD prediction SET r.predictedProgress = " +
-                    "prediction");
+            session.run("MATCH () - [r:WORKS_FOR] -> () WHERE exists(r.time) AND NOT exists(r.progress) SET " +
+                    "r.predictedProgress = regression.linear.predict('work and progress', r.time)");
 
             SimpleRegression R = new SimpleRegression();
             R.addData(1.0, 1.345);
@@ -68,26 +68,28 @@ public class LRTest {
                 assertThat(actualPrediction, equalTo(expectedPrediction));
             }
 
-            session.run("CALL regression.linear.storeModel('work and progress')");
-            session.run("CALL regression.linear.removeModel('work and progress')");
-            session.run("CALL regression.linear.createFromStorage('work and progress')");
+            Record r = session.run("RETURN regression.linear.serialize('work and progress') as data").next();
+            byte[] data = r.get("data").asByteArray();
+            session.run("CALL regression.linear.delete('work and progress')");
+            Map<String, Object> params = new HashMap<>();
+            params.put("data", data);
+            session.run("CALL regression.linear.load('work and progress', $data)", params);
 
 
             //remove data from relationship between nodes 1 and 2
-            session.run("MATCH (:Node {id:1})-[r:WORKS_FOR]->(:Node {id:2}) CALL regression.linear.removeData('work " +
-                    "and progress', r.time, r.progress) YIELD state, N RETURN r.time as time, r.progress as progress, state, N");
+            session.run("MATCH (:Node {id:1})-[r:WORKS_FOR]->(:Node {id:2}) CALL regression.linear.remove('work " +
+                    "and progress', r.time, r.progress) return r");
 
             //create a new relationship between nodes 7 and 8
             session.run("MATCH (n7:Node {id:7}) MERGE (n7)-[:WORKS_FOR {time:6.0, progress:5.870}]->(:Node {id:8})");
 
             //add data from new relationship to model
-            session.run("MATCH (:Node {id:7})-[r:WORKS_FOR]->(:Node {id:8}) CALL regression.linear.addData('work " +
-                    "and progress', r.time, r.progress) YIELD state, N RETURN r.time, r.progress, state, N");
+            session.run("MATCH (:Node {id:7})-[r:WORKS_FOR]->(:Node {id:8}) CALL regression.linear.add('work " +
+                    "and progress', r.time, r.progress) RETURN r");
 
             //map new model on all relationships with unknown progress
             session.run("MATCH (:Node)-[r:WORKS_FOR]->(:Node) WHERE exists(r.time) AND NOT exists(r.progress) " +
-                    "CALL regression.linear.predict('work and progress', " +
-                    "r.time) YIELD prediction SET r.predictedProgress = prediction");
+                    "SET r.predictedProgress = regression.linear.predict('work and progress', r.time)");
 
             //replicate the creation and updates of the model
             R.removeData(1.0, 1.345);
@@ -107,6 +109,9 @@ public class LRTest {
 
                 assertThat( actualPrediction, equalTo( expectedPrediction ) );
             }
+
+            session.run("CALL regression.linear.delete('work and progress')");
+
 
         }
     }

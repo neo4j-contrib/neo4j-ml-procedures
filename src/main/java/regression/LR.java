@@ -1,12 +1,15 @@
 package regression;
 
 import org.apache.commons.math3.stat.regression.SimpleRegression;
+import org.bytedeco.javacv.FrameFilter;
 import org.neo4j.graphdb.Entity;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.logging.Log;
 import org.neo4j.procedure.*;
 import org.neo4j.procedure.Mode;
+import org.neo4j.unsafe.impl.batchimport.cache.ByteArray;
+import sun.java2d.pipe.SpanShapeRenderer;
 
 import java.io.*;
 import java.util.*;
@@ -24,54 +27,49 @@ public class LR {
         return Stream.of((new LRModel(model)).asResult());
     }
 
-    @Procedure(value = "regression.linear.addData", mode = Mode.READ)
-    public Stream<ModelResult> addData(@Name("model") String model, @Name("given") double given, @Name("expected") double expected) {
+    @Procedure(value = "regression.linear.info", mode = Mode.READ)
+    public Stream<ModelResult> info(@Name("model") String model) {
+        LRModel lrModel = LRModel.from(model);
+        return Stream.of(lrModel.asResult());
+    }
+
+    @Procedure(value = "regression.linear.add", mode = Mode.READ)
+    public void add(@Name("model") String model, @Name("given") double given, @Name("expected") double expected) {
         LRModel lrModel = LRModel.from(model);
         lrModel.add(given, expected);
-        return Stream.of(lrModel.asResult());
     }
 
-    @Procedure(value = "regression.linear.removeData", mode = Mode.READ)
-    public Stream<ModelResult> removeData(@Name("model") String model, @Name("given") double given, @Name("expected") double expected) {
+    @Procedure(value = "regression.linear.remove", mode = Mode.READ)
+    public void remove(@Name("model") String model, @Name("given") double given, @Name("expected") double expected) {
         LRModel lrModel = LRModel.from(model);
         lrModel.removeData(given, expected);
-        return Stream.of(lrModel.asResult());
     }
 
-    @Procedure(value = "regression.linear.removeModel", mode = Mode.READ)
-    public Stream<ModelResult> removeModel(@Name("model") String model) {
+    @Procedure(value = "regression.linear.delete", mode = Mode.READ)
+    public Stream<ModelResult> delete(@Name("model") String model) {
         return Stream.of(LRModel.removeModel(model));
     }
 
-    @Procedure(value = "regression.linear.predict", mode = Mode.READ)
-    public Stream<PredictResult> predict(@Name("mode") String model, @Name("given") double given) {
+    @UserFunction(value = "regression.linear.predict")
+    public double predict(@Name("mode") String model, @Name("given") double given) {
         LRModel lrModel = LRModel.from(model);
-        return Stream.of(lrModel.predict(given));
+        return lrModel.predict(given);
     }
 
-    @Procedure(value = "regression.linear.storeModel", mode = Mode.WRITE)
-    public Stream<ModelResult> storeModel(@Name("model") String model) {
+    @UserFunction(value = "regression.linear.serialize")
+    public Object serialize(@Name("model") String model) {
         LRModel lrModel = LRModel.from(model);
-        lrModel.store(db);
-        return Stream.of(lrModel.asResult());
+        return lrModel.serialize();
     }
 
-    @Procedure(value = "regression.linear.createFromStorage", mode = Mode.READ)
-    public Stream<ModelResult> createFromStorage(@Name("model") String model) {
-        Map<String, Object> parameters = new HashMap<>();
-        parameters.put("name", model);
-        Entity modelNode;
+    @Procedure(value = "regression.linear.load", mode = Mode.READ)
+    public Stream<ModelResult> load(@Name("model") String model, @Name("data") Object data) {
         SimpleRegression R;
-        try {
-            ResourceIterator<Entity> n = db.execute("MATCH (n:LRModel {name:$name}) RETURN " +
-                    "n", parameters).columnAs("n");
-            modelNode = n.next();
-            byte[] m = (byte[]) modelNode.getProperty("serializedModel");
-            R = (SimpleRegression) convertFromBytes(m);
-        } catch (Exception e) {
-            throw new RuntimeException("no existing model for specified independent and dependent variables and model ID");
+        try { R = (SimpleRegression) convertFromBytes((byte[]) data); }
+        catch (Exception e) {
+            throw new RuntimeException("invalid data");
         }
-        return Stream.of(new LRModel(model, R, (String) modelNode.getProperty("state")).asResult());
+        return Stream.of((new LRModel(model, R)).asResult());
     }
 
     public static class ModelResult {
@@ -94,13 +92,6 @@ public class LR {
         }
     }
 
-    public static class PredictResult {
-        public final double prediction;
-        public PredictResult(double p) {
-            this.prediction = p;
-        }
-    }
-
     //Serializes the object into a byte array for storage
     public static byte[] convertToBytes(Object object) throws IOException {
         try (ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -117,6 +108,8 @@ public class LR {
             return in.readObject();
         }
     }
+
+
 
 
 }
