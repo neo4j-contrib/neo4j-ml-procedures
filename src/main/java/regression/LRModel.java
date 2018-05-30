@@ -121,7 +121,7 @@ public class LRModel {
     public enum State {created, ready, removed, unknown}
 
     public LR.ModelResult asResult() {
-        LR.ModelResult result = new LR.ModelResult(this.name, this.state, R.getN());
+        LR.ModelResult result = new LR.ModelResult(this.name, this.state, this.R.getN());
         return result;
     }
 

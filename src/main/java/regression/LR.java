@@ -39,6 +39,17 @@ public class LR {
         lrModel.add(given, expected);
     }
 
+    @Procedure(value = "regression.linear.addM", mode = Mode.READ)
+    public void addM(@Name("model") String model, @Name("given") Object given, @Name("expected") Object expected) {
+        double[] g = (double[]) given;
+        double[] e = (double[]) expected;
+        LRModel lrModel = LRModel.from(model);
+        if (g.length != e.length) throw new IllegalArgumentException("Lengths of the two data arrays are unequal.");
+        for (int i = 0; i < g.length; i++) {
+            lrModel.add(g[i], e[i]);
+        }
+    }
+
     @Procedure(value = "regression.linear.remove", mode = Mode.READ)
     public void remove(@Name("model") String model, @Name("given") double given, @Name("expected") double expected) {
         LRModel lrModel = LRModel.from(model);
@@ -102,7 +113,7 @@ public class LR {
     }
 
     //de serializes the byte array and returns the stored object
-    private static Object convertFromBytes(byte[] bytes) throws IOException, ClassNotFoundException {
+    public static Object convertFromBytes(byte[] bytes) throws IOException, ClassNotFoundException {
         try (ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
              ObjectInput in = new ObjectInputStream(bis)) {
             return in.readObject();
