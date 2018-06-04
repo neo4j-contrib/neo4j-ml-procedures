@@ -3,6 +3,8 @@ package regression;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.List;
+import java.util.Arrays;
 
 import org.junit.After;
 import org.junit.Before;
@@ -143,8 +145,8 @@ public class LRTest {
         check(result, expected);
 
         //test addM procedure for adding multiple data points
-        double[] points = {7.0, 8.0};
-        double[] observed = {6.900, 9.234};
+        List<Double> points = Arrays.asList(7.0, 8.0);
+        List<Double> observed = Arrays.asList(6.900, 9.234);
         params.put("points", points);
         params.put("observed", observed);
 
